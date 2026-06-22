@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Java OOP Exam Simulation Engine</title>
+  
+  <!-- Premium Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- CodeMirror Styling & Dracula Theme -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
+  
+  <!-- Custom Application Styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- App Wrapper -->
+  <div id="app" class="app-container">
+    
+    <!-- Welcome Screen -->
+    <div id="welcome-screen" class="view-panel active">
+      <div class="header-banner animate-fade-in">
+        <span class="badge-accent">ACADEMIC PORTAL</span>
+        <h1 class="main-title">Java OOP Simulation Portal</h1>
+        <p class="subtitle font-inter">Train and test your Object-Oriented Programming skills with automated local compilation and unit testing.</p>
+      </div>
+
+      <div class="modes-grid container">
+        
+        <!-- Last Year Card -->
+        <div class="mode-card animate-slide-up">
+          <div class="card-glow"></div>
+          <div class="card-content">
+            <div class="mode-icon">
+              <!-- Calendar/History SVG -->
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15.5a5 5 0 1 1-7-7.1V3a1 1 0 0 0-2 0v5.4a5 5 0 1 1-7 7.1 1 1 0 0 0 1.4 1.4 5 5 0 0 1 7-7.1V19a1 1 0 0 0 2 0v-3.6a5 5 0 0 1 7 3.6 1 1 0 0 0 1.4-1.4z"/></svg>
+            </div>
+            <h2>Exam Type: Last Year</h2>
+            <p>An exam session featuring one of 10 random question packets. Each packet contains 8 challenging OOP questions covering software design patterns.</p>
+            
+            <div class="mode-details font-inter">
+              <div class="detail-row"><span class="lbl">Duration:</span> <span class="val">1 Hour 30 Minutes</span></div>
+              <div class="detail-row"><span class="lbl">Questions Count:</span> <span class="val">8 Questions</span></div>
+              <div class="detail-row"><span class="lbl">Key Topics:</span> <span class="val">Interfaces, Generics, MySQL JDBC, Downcasting, Singleton, Builder, Factory</span></div>
+            </div>
+            
+            <button id="btn-start-last-year" class="btn btn-primary btn-full font-outfit">Start Last Year Simulation</button>
+          </div>
+        </div>
+
+        <!-- Becir Card -->
+        <div class="mode-card animate-slide-up" style="animation-delay: 0.1s;">
+          <div class="card-glow" style="background: radial-gradient(circle at center, rgba(168, 85, 247, 0.15) 0%, transparent 60%);"></div>
+          <div class="card-content">
+            <div class="mode-icon text-purple">
+              <!-- Code/Database/Report SVG -->
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            </div>
+            <h2>Exam Type: Becir</h2>
+            <p>Test advanced data processing skills. Contains 7 detailed CSV processing questions integrating Custom Annotations, Custom Exceptions, Fluent Builders, and Factories.</p>
+            
+            <div class="mode-details font-inter">
+              <div class="detail-row"><span class="lbl">Duration:</span> <span class="val">1 Hour 30 Minutes</span></div>
+              <div class="detail-row"><span class="lbl">Questions Count:</span> <span class="val">7 Questions</span></div>
+              <div class="detail-row"><span class="lbl">Key Topics:</span> <span class="val">Annotations Reflection, Fluent Builder, Factory Pattern, Java IO</span></div>
+            </div>
+            
+            <button id="btn-start-becir" class="btn btn-purple btn-full font-outfit">Start Becir Simulation</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Exam Workspace -->
+    <div id="exam-workspace" class="view-panel">
+      
+      <!-- Top Navigation bar -->
+      <header class="exam-header font-outfit">
+        <div class="logo-area">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3z"/><path d="M6 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3z"/><path d="M12 3v18"/></svg>
+          <span id="exam-title-text">Simulation - Last Year (Packet 1)</span>
+        </div>
+        
+        <div class="timer-area">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span id="countdown-timer" class="font-fira">01:30:00</span>
+        </div>
+
+        <div class="action-area">
+          <button id="btn-submit-exam" class="btn btn-danger font-outfit">Submit Exam</button>
+        </div>
+      </header>
+
+      <!-- Main Layout Split -->
+      <main class="workspace-layout">
+        
+        <!-- Left Sidebar: Questions selection & statement -->
+        <section class="left-panel">
+          
+          <!-- Tabs for Questions -->
+          <div class="panel-tabs font-outfit" id="question-tabs">
+            <!-- Dynamically populated -->
+          </div>
+
+          <!-- Question description viewer -->
+          <div class="question-container font-inter">
+            <div id="question-description" class="markdown-body">
+              <!-- Rendered Question Description -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Right Side: IDE & Terminal Output -->
+        <section class="right-panel">
+          
+          <!-- Editor Controls -->
+          <div class="editor-header">
+            <div class="editor-title font-outfit">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              <span>Java Editor (Mock Compiler)</span>
+            </div>
+            
+            <div class="editor-actions">
+              <button id="btn-reset-code" class="btn-icon" title="Reset Code Template">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              </button>
+              
+              <button id="btn-run-test" class="btn btn-success font-outfit">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <span>Run Tests (Test Code)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- CodeMirror Editor Box -->
+          <div class="editor-body">
+            <textarea id="code-textarea"></textarea>
+          </div>
+
+          <!-- Slide Drawer Console Logs & Unit Tests -->
+          <div class="drawer-panel" id="console-drawer">
+            <div class="drawer-header font-outfit">
+              <div class="drawer-tabs">
+                <button id="tab-test-cases" class="drawer-tab-btn active">Unit Test Result</button>
+                <button id="tab-console" class="drawer-tab-btn">Console Output</button>
+              </div>
+              <div class="score-pill font-fira">
+                Score: <span id="current-score-text">0.0</span> / <span id="total-score-text">11.0</span>
+              </div>
+            </div>
+            
+            <div class="drawer-content font-fira">
+              <!-- Unit Tests Output -->
+              <div id="test-cases-panel" class="tab-panel active">
+                <ul id="test-results-list" class="test-results-list">
+                  <li class="status-neutral">Please run tests on your code by clicking the "Run Tests" button.</li>
+                </ul>
+              </div>
+
+              <!-- Console stdout Output -->
+              <div id="console-panel" class="tab-panel">
+                <pre id="console-output-text" class="console-text">Terminal ready... Any System.out.println() statements will print here.</pre>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+      </main>
+    </div>
+
+    <!-- Exam Results Page -->
+    <div id="results-screen" class="view-panel">
+      <div class="results-header container animate-fade-in">
+        <h1 class="main-title text-emerald">Simulation Completed!</h1>
+        <p class="subtitle font-inter">Here is the detailed evaluation of your program code from the simulated exam.</p>
+        
+        <div class="score-display font-outfit">
+          <div class="score-circle">
+            <span id="final-score-value">0</span>
+            <span class="max-score">/ <span id="final-max-score">37</span> Pts</span>
+          </div>
+          <p id="grade-comment" class="font-inter">Great job! You completed the exam with a satisfying performance.</p>
+        </div>
+      </div>
+
+      <div class="results-breakdown container animate-slide-up">
+        <h2>Question Breakdown and Scores</h2>
+        <div class="table-container font-inter">
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Question Title</th>
+                <th>Question Type</th>
+                <th>Max Score</th>
+                <th>Earned Score</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="results-table-body">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="result-actions font-outfit">
+          <button id="btn-back-home" class="btn btn-primary">Back to Main Menu</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Code Review Modal (Popup) -->
+    <div id="code-review-modal" class="modal-overlay">
+      <div class="modal-content animate-scale-up font-inter">
+        <div class="modal-header">
+          <h3 id="modal-q-title">Review Submitted Code</h3>
+          <button class="btn-close-modal" id="btn-close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="score-subtext font-outfit">
+            Score Earned: <strong id="modal-q-score">0</strong> Pts
+          </div>
+          <h4 class="font-outfit">Submitted Program Code:</h4>
+          <pre><code id="modal-q-code" class="font-fira"></code></pre>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CodeMirror Script Core & Java Language Mode -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/clike/clike.min.js"></script>
+  
+  <!-- App JS Scripts -->
+  <script src="questions.js"></script>
+  <script src="javaRunner.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

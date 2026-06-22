@@ -1,0 +1,27 @@
+{
+  "name": "java-oop-exam-simulator",
+  "version": "1.0.0",
+  "description": "A browser-based simulation engine for Java OOP exams with compiler check and unit testing.",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "java",
+    "oop",
+    "simulation",
+    "exam",
+    "compiler",
+    "sandbox"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "mysql2": "^3.22.5"
+  }
+}

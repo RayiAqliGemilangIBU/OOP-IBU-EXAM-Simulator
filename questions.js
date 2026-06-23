@@ -516,7 +516,7 @@ Create a Singleton configuration class to store system configuration properties.
 - Private attribute \`configSettings: HashMap<String, String>\`.
 - Methods:
   - \`void setSetting(String key, String value)\`
-  - \`Optional<String> getSetting(String key)\`: Returns the config value wrapped in an \`Optional\`, or empty if missing.
+  - \`Optional<String> getSetting(String key)\`: Returns the config value wrapped in an \`Optional<String>\`, or empty if missing.
   - \`void clearSettings()\``,
       starterCode: `import java.util.HashMap;
 import java.util.Optional;

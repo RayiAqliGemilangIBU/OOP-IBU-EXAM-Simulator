@@ -98,6 +98,233 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   });
 
+  // --- Live Syntax Linter (VS Code Style) ---
+  function lintJavaCode(text) {
+    const found = [];
+    const lines = text.split("\n");
+    
+    // Bracket balancing check
+    const stack = [];
+    const opening = ['{', '(', '['];
+    const closing = ['}', ')', ']'];
+    const matches = { '}': '{', ')': '(', ']': '[' };
+    
+    let inBlockComment = false;
+    
+    const commonTypos = {
+      "publc": "public", "pulic": "public", "pblic": "public",
+      "statc": "static", "sttic": "static", "stac": "static",
+      "clas": "class", "clss": "class",
+      "viod": "void", "vod": "void",
+      "retrn": "return", "retur": "return",
+      "implments": "implements", "impletents": "implements",
+      "interfac": "interface", "inteface": "interface",
+      "Strng": "String", "Sting": "String",
+      "Sytem": "System", "Systemm": "System"
+    };
+
+    for (let l = 0; l < lines.length; l++) {
+      const line = lines[l];
+      let inString = false;
+      let inChar = false;
+      let lastQuoteIndex = -1;
+      let lastCharIndex = -1;
+      
+      // Check for common keyword typos
+      let match;
+      const wordRegex = /\b[a-zA-Z]+\b/g;
+      while ((match = wordRegex.exec(line)) !== null) {
+        const word = match[0];
+        const startCol = match.index;
+        // Don't flag typos inside comments or strings
+        const commentIdx = line.indexOf("//");
+        if (commentIdx !== -1 && startCol > commentIdx) continue;
+        
+        if (commonTypos[word]) {
+          found.push({
+            message: `Possible typo: did you mean '${commonTypos[word]}'?`,
+            severity: "error",
+            from: CodeMirror.Pos(l, startCol),
+            to: CodeMirror.Pos(l, startCol + word.length)
+          });
+        }
+      }
+
+      for (let c = 0; c < line.length; c++) {
+        const char = line[c];
+        const nextChar = line[c + 1] || "";
+        
+        // Handle block comment toggle
+        if (inBlockComment) {
+          if (char === '*' && nextChar === '/') {
+            inBlockComment = false;
+            c++; // skip '/'
+          }
+          continue;
+        }
+        
+        // Start block comment
+        if (char === '/' && nextChar === '*') {
+          inBlockComment = true;
+          c++; // skip '*'
+          continue;
+        }
+        
+        // Start line comment - ignore rest of the line
+        if (char === '/' && nextChar === '/') {
+          break; // Exit character loop
+        }
+        
+        // Handle string escaping & toggling
+        if (inString) {
+          if (char === '"' && (c === 0 || line[c-1] !== '\\')) {
+            inString = false;
+          }
+          continue;
+        }
+        
+        if (inChar) {
+          if (char === '\'' && (c === 0 || line[c-1] !== '\\')) {
+            inChar = false;
+            // Check character literal validity
+            const content = line.substring(lastCharIndex + 1, c);
+            const simplified = content.replace(/\\./g, 'X');
+            if (simplified.length !== 1) {
+              found.push({
+                message: simplified.length === 0 ? "Empty character literal" : "Invalid character literal (must be a single character)",
+                severity: "error",
+                from: CodeMirror.Pos(l, lastCharIndex),
+                to: CodeMirror.Pos(l, c + 1)
+              });
+            }
+          }
+          continue;
+        }
+        
+        // Toggle string start
+        if (char === '"') {
+          inString = true;
+          lastQuoteIndex = c;
+          continue;
+        }
+        
+        // Toggle char start
+        if (char === '\'') {
+          inChar = true;
+          lastCharIndex = c;
+          continue;
+        }
+        
+        // Brackets checking
+        if (opening.includes(char)) {
+          stack.push({ char, line: l, col: c });
+        } else if (closing.includes(char)) {
+          if (stack.length === 0) {
+            found.push({
+              message: `Unmatched closing brace '${char}'`,
+              severity: "error",
+              from: CodeMirror.Pos(l, c),
+              to: CodeMirror.Pos(l, c + 1)
+            });
+          } else {
+            const top = stack.pop();
+            if (top.char !== matches[char]) {
+              found.push({
+                message: `Mismatched brace: Found '${char}', but expected closing for '${top.char}' from line ${top.line + 1}`,
+                severity: "error",
+                from: CodeMirror.Pos(l, c),
+                to: CodeMirror.Pos(l, c + 1)
+              });
+            }
+          }
+        }
+      }
+      
+      // End of character loop for this line
+      if (inString) {
+        found.push({
+          message: "Unclosed string literal",
+          severity: "error",
+          from: CodeMirror.Pos(l, lastQuoteIndex),
+          to: CodeMirror.Pos(l, line.length)
+        });
+      }
+      if (inChar) {
+        found.push({
+          message: "Unclosed character literal",
+          severity: "error",
+          from: CodeMirror.Pos(l, lastCharIndex),
+          to: CodeMirror.Pos(l, line.length)
+        });
+      }
+      
+      // Semicolon check on statements
+      let lineForSemicolon = line;
+      const doubleSlash = line.indexOf("//");
+      if (doubleSlash !== -1) {
+        lineForSemicolon = line.substring(0, doubleSlash);
+      }
+      const trimmedSemi = lineForSemicolon.trim();
+      if (trimmedSemi.length > 0) {
+        // Skip control flows, annotations, declarations
+        const isControl = /^(if|for|while|else|try|catch|class|interface|enum|import|package|@|\/\/|\/\*)/.test(trimmedSemi);
+        const isSafeEnd = /[{};,\+\-\*\/&\|\^=\?:.]$/.test(trimmedSemi);
+        
+        if (!isControl && !isSafeEnd) {
+          // If the next non-empty line starts with '{', it's a declaration, not a statement
+          let nextLineStartsWidthBrace = false;
+          for (let nextL = l + 1; nextL < lines.length; nextL++) {
+            const nextLineTrimmed = lines[nextL].trim();
+            if (nextLineTrimmed.length > 0) {
+              if (nextLineTrimmed.startsWith("{")) {
+                nextLineStartsWidthBrace = true;
+              }
+              break;
+            }
+          }
+          
+          // Method declarations and constructor definitions shouldn't need a semicolon
+          const isMethodDecl = /^(public|private|protected)\b.*?\)\s*$/.test(trimmedSemi) && !trimmedSemi.includes("=");
+          const isConstructor = /^[A-Z][a-zA-Z0-9_]*\s*\(.*?\)\s*$/.test(trimmedSemi);
+          
+          if (!nextLineStartsWidthBrace && !isMethodDecl && !isConstructor) {
+            // Check if it's a statement
+            const isStatement = /\b(return|throw|break|continue)\b/.test(trimmedSemi) ||
+                                /^[a-zA-Z0-9_.]+\s*=[^=]/.test(trimmedSemi) ||
+                                trimmedSemi.endsWith(")") ||
+                                /\b(System\.out\.print|this\.|super\.)/.test(trimmedSemi);
+            
+            if (isStatement) {
+              found.push({
+                message: "Missing semicolon ';'",
+                severity: "error",
+                from: CodeMirror.Pos(l, Math.max(0, line.length - 1)),
+                to: CodeMirror.Pos(l, line.length)
+              });
+            }
+          }
+        }
+      }
+    }
+    
+    // Unclosed opening braces
+    while (stack.length > 0) {
+      const unclosed = stack.pop();
+      found.push({
+        message: `Unclosed opening brace '${unclosed.char}'`,
+        severity: "error",
+        from: CodeMirror.Pos(unclosed.line, unclosed.col),
+        to: CodeMirror.Pos(unclosed.line, unclosed.col + 1)
+      });
+    }
+    
+    return found;
+  }
+
+  CodeMirror.registerHelper("lint", "clike", lintJavaCode);
+  CodeMirror.registerHelper("lint", "java", lintJavaCode);
+  CodeMirror.registerHelper("lint", "text/x-java", lintJavaCode);
+
   // --- Initializers ---
   function initCodeEditor() {
     const textarea = document.getElementById("code-textarea");
@@ -107,6 +334,8 @@ document.addEventListener("DOMContentLoaded", () => {
       lineNumbers: true,
       matchBrackets: true,
       autoCloseBrackets: true, // VS Code style bracket auto-closing
+      gutters: ["CodeMirror-linenumbers", "CodeMirror-lint-markers"],
+      lint: true, // Enable syntax linting
       indentUnit: 4,
       tabSize: 4,
       lineWrapping: true

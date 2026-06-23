@@ -301,7 +301,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Custom regex markdown formatter
   function formatMarkdown(md) {
     if (!md) return "";
-    let html = md;
+    let html = md.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     
     // Bold
     html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");

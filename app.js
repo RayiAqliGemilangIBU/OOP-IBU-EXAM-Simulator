@@ -103,6 +103,114 @@ document.addEventListener("DOMContentLoaded", () => {
     const found = [];
     const lines = text.split("\n");
     
+    function getPosFromIndex(idx) {
+      const sub = text.substring(0, idx);
+      const subLines = sub.split("\n");
+      const line = subLines.length - 1;
+      const col = subLines[subLines.length - 1].length;
+      return CodeMirror.Pos(line, col);
+    }
+
+    // Extract interfaces and classes declared in raw text
+    const interfaces = new Set();
+    const interfaceRegex = /\binterface\s+([A-Za-z0-9_]+)/g;
+    let intMatch;
+    while ((intMatch = interfaceRegex.exec(text)) !== null) {
+      interfaces.add(intMatch[1]);
+    }
+
+    const classNames = new Set();
+    const classNamesRegex = /\bclass\s+([A-Za-z0-9_]+)/g;
+    let cnMatch;
+    while ((cnMatch = classNamesRegex.exec(text)) !== null) {
+      classNames.add(cnMatch[1]);
+    }
+
+    // Parse class headers to check for multiple inheritance or incorrect extends/implements usage
+    let cleanSourceForLint = text;
+    while (true) {
+      let match = cleanSourceForLint.match(/\bclass\s+([A-Za-z0-9_]+)/);
+      if (!match) break;
+      
+      let classIndex = match.index;
+      let className = match[1];
+      
+      let openBraceIndex = cleanSourceForLint.indexOf('{', classIndex);
+      if (openBraceIndex === -1) {
+        cleanSourceForLint = cleanSourceForLint.substring(0, classIndex) + "cl_ass" + cleanSourceForLint.substring(classIndex + 5);
+        continue;
+      }
+      
+      let headerText = cleanSourceForLint.substring(classIndex, openBraceIndex);
+      let cleanHeader = headerText.replace(/<[^>]*>/g, '');
+      
+      const extendsIndex = cleanHeader.indexOf('extends');
+      const implementsIndex = cleanHeader.indexOf('implements');
+      
+      const originalHeaderIndex = text.indexOf(headerText);
+      
+      if (extendsIndex !== -1 && originalHeaderIndex !== -1) {
+        const endOfExtends = implementsIndex !== -1 ? implementsIndex : cleanHeader.length;
+        const extendsClause = cleanHeader.substring(extendsIndex + 7, endOfExtends).trim();
+        
+        if (extendsClause.includes(',')) {
+          const startOfExtendsIndex = originalHeaderIndex + headerText.indexOf('extends');
+          const endOfExtendsIndex = startOfExtendsIndex + 7 + extendsClause.length;
+          
+          found.push({
+            message: `Class '${className}' cannot extend multiple classes: '${extendsClause}' (Java does not support multiple inheritance for classes)`,
+            severity: "error",
+            from: getPosFromIndex(startOfExtendsIndex),
+            to: getPosFromIndex(endOfExtendsIndex)
+          });
+        } else {
+          const parentClasses = extendsClause.split(/[\s,]+/).filter(Boolean);
+          for (const parent of parentClasses) {
+            if (interfaces.has(parent)) {
+              const parentStartIdx = originalHeaderIndex + headerText.indexOf(parent);
+              found.push({
+                message: `Class '${className}' cannot extend interface '${parent}'. Use 'implements' instead of 'extends'.`,
+                severity: "error",
+                from: getPosFromIndex(parentStartIdx),
+                to: getPosFromIndex(parentStartIdx + parent.length)
+              });
+            }
+          }
+        }
+      }
+      
+      if (implementsIndex !== -1 && originalHeaderIndex !== -1) {
+        const implementsClause = cleanHeader.substring(implementsIndex + 10).trim();
+        const implementedInterfaces = implementsClause.split(/[\s,]+/).filter(Boolean);
+        for (const impl of implementedInterfaces) {
+          if (classNames.has(impl)) {
+            const implStartIdx = originalHeaderIndex + headerText.indexOf(impl);
+            found.push({
+              message: `Class '${className}' cannot implement class '${impl}'. Use 'extends' instead of 'implements'.`,
+              severity: "error",
+              from: getPosFromIndex(implStartIdx),
+              to: getPosFromIndex(implStartIdx + impl.length)
+            });
+          }
+        }
+      }
+      
+      // Scan body to find closing brace of this class to skip it
+      let braceCount = 1;
+      let scanIndex = openBraceIndex + 1;
+      while (scanIndex < cleanSourceForLint.length && braceCount > 0) {
+        if (cleanSourceForLint[scanIndex] === '{') braceCount++;
+        else if (cleanSourceForLint[scanIndex] === '}') braceCount--;
+        scanIndex++;
+      }
+      
+      if (braceCount === 0) {
+        cleanSourceForLint = cleanSourceForLint.substring(0, classIndex) + cleanSourceForLint.substring(scanIndex);
+      } else {
+        cleanSourceForLint = cleanSourceForLint.substring(0, classIndex) + "cl_ass" + cleanSourceForLint.substring(classIndex + 5);
+      }
+    }
+
     // Bracket balancing check
     const stack = [];
     const opening = ['{', '(', '['];

@@ -1445,6 +1445,84 @@ function compileJavaCode(javaCode) {
     const unclosed = stack.pop();
     errors.push(`Compilation Error: Unclosed opening brace '${unclosed.char}' at line ${unclosed.line}, column ${unclosed.col}`);
   }
+
+  // Extract interfaces and classes declared in raw javaCode
+  const interfaces = new Set();
+  const interfaceRegex = /\binterface\s+([A-Za-z0-9_]+)/g;
+  let intMatch;
+  while ((intMatch = interfaceRegex.exec(javaCode)) !== null) {
+    interfaces.add(intMatch[1]);
+  }
+
+  const classNames = new Set();
+  const classNamesRegex = /\bclass\s+([A-Za-z0-9_]+)/g;
+  let cnMatch;
+  while ((cnMatch = classNamesRegex.exec(javaCode)) !== null) {
+    classNames.add(cnMatch[1]);
+  }
+
+  // Parse class headers to check for multiple inheritance or incorrect extends/implements usage
+  let cleanSource = cleaned;
+  while (true) {
+    let match = cleanSource.match(/\bclass\s+([A-Za-z0-9_]+)/);
+    if (!match) break;
+    
+    let classIndex = match.index;
+    let className = match[1];
+    
+    let openBraceIndex = cleanSource.indexOf('{', classIndex);
+    if (openBraceIndex === -1) {
+      cleanSource = cleanSource.substring(0, classIndex) + "cl_ass" + cleanSource.substring(classIndex + 5);
+      continue;
+    }
+    
+    let headerText = cleanSource.substring(classIndex, openBraceIndex);
+    let cleanHeader = headerText.replace(/<[^>]*>/g, '');
+    
+    const extendsIndex = cleanHeader.indexOf('extends');
+    const implementsIndex = cleanHeader.indexOf('implements');
+    
+    if (extendsIndex !== -1) {
+      const endOfExtends = implementsIndex !== -1 ? implementsIndex : cleanHeader.length;
+      const extendsClause = cleanHeader.substring(extendsIndex + 7, endOfExtends).trim();
+      
+      if (extendsClause.includes(',')) {
+        errors.push(`Compilation Error: Class '${className}' cannot extend multiple classes: '${extendsClause}' (Java does not support multiple inheritance for classes)`);
+      } else {
+        const parentClasses = extendsClause.split(/[\s,]+/).filter(Boolean);
+        for (const parent of parentClasses) {
+          if (interfaces.has(parent)) {
+            errors.push(`Compilation Error: Class '${className}' cannot extend interface '${parent}'. Use 'implements' instead of 'extends'.`);
+          }
+        }
+      }
+    }
+    
+    if (implementsIndex !== -1) {
+      const implementsClause = cleanHeader.substring(implementsIndex + 10).trim();
+      const implementedInterfaces = implementsClause.split(/[\s,]+/).filter(Boolean);
+      for (const impl of implementedInterfaces) {
+        if (classNames.has(impl)) {
+          errors.push(`Compilation Error: Class '${className}' cannot implement class '${impl}'. Use 'extends' instead of 'implements'.`);
+        }
+      }
+    }
+    
+    // Scan body to find closing brace of this class to skip it
+    let braceCount = 1;
+    let scanIndex = openBraceIndex + 1;
+    while (scanIndex < cleanSource.length && braceCount > 0) {
+      if (cleanSource[scanIndex] === '{') braceCount++;
+      else if (cleanSource[scanIndex] === '}') braceCount--;
+      scanIndex++;
+    }
+    
+    if (braceCount === 0) {
+      cleanSource = cleanSource.substring(0, classIndex) + cleanSource.substring(scanIndex);
+    } else {
+      cleanSource = cleanSource.substring(0, classIndex) + "cl_ass" + cleanSource.substring(classIndex + 5);
+    }
+  }
   
   if (errors.length > 0) {
     return { success: false, log: errors.join('\n') };

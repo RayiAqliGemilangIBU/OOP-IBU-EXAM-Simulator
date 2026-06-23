@@ -58,6 +58,46 @@ document.addEventListener("DOMContentLoaded", () => {
   const modalQCode = document.getElementById("modal-q-code");
   const btnCloseModal = document.getElementById("btn-close-modal");
 
+  // --- Autocomplete & Editor Helpers ---
+  CodeMirror.registerHelper("hint", "javaCustom", function(editor, options) {
+    const cur = editor.getCursor();
+    const token = editor.getTokenAt(cur);
+    const start = token.start;
+    const end = cur.ch;
+    const line = cur.line;
+    const word = token.string;
+
+    const javaKeywords = [
+      "public", "private", "protected", "class", "interface", "extends", "implements",
+      "static", "final", "abstract", "new", "return", "void", "import", "package",
+      "this", "super", "throw", "throws", "try", "catch", "finally", "if", "else",
+      "for", "while", "do", "break", "continue", "switch", "case", "default",
+      "String", "Integer", "Double", "Float", "Boolean", "Character", "int", "double", "float", "boolean", "char", "long", "short", "byte",
+      "ArrayList", "HashMap", "List", "Map", "Optional", "System", "System.out.println", "System.out.print",
+      "DriverManager", "Connection", "PreparedStatement", "ResultSet", "BufferedReader", "FileReader", "BufferedWriter", "FileWriter", "PrintWriter",
+      "WrongFormatException", "RuntimeException", "Exception", "NumberFormatException"
+    ];
+
+    const docText = editor.getValue();
+    const wordRegex = /[a-zA-Z_0-9.]{3,}/g;
+    const docWords = new Set();
+    let m;
+    while ((m = wordRegex.exec(docText)) !== null) {
+      docWords.add(m[0]);
+    }
+
+    const allSuggestions = Array.from(new Set([...javaKeywords, ...docWords]));
+    const search = word.trim();
+    if (!search) return null;
+    const list = allSuggestions.filter(s => s.toLowerCase().startsWith(search.toLowerCase()) && s !== search);
+
+    return {
+      list: list,
+      from: CodeMirror.Pos(line, start),
+      to: CodeMirror.Pos(line, end)
+    };
+  });
+
   // --- Initializers ---
   function initCodeEditor() {
     const textarea = document.getElementById("code-textarea");
@@ -66,9 +106,23 @@ document.addEventListener("DOMContentLoaded", () => {
       theme: "dracula",
       lineNumbers: true,
       matchBrackets: true,
+      autoCloseBrackets: true, // VS Code style bracket auto-closing
       indentUnit: 4,
       tabSize: 4,
       lineWrapping: true
+    });
+
+    // Auto-trigger autocomplete as user types (VS Code style)
+    editor.on("inputRead", (cm, change) => {
+      if (change.origin === "+input") {
+        const text = change.text[0];
+        if (/^[a-zA-Z_0-9.]$/.test(text)) {
+          cm.showHint({
+            hint: CodeMirror.hint.javaCustom,
+            completeSingle: false
+          });
+        }
+      }
     });
 
     // Sync editor changes back to state in real time

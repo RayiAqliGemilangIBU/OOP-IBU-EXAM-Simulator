@@ -1518,6 +1518,18 @@ function compileJavaCode(javaCode) {
     }
     
     if (braceCount === 0) {
+      let bodyText = cleanSource.substring(openBraceIndex + 1, scanIndex - 1);
+      let { fields } = parseClassBody(bodyText);
+      fields.forEach(f => {
+        let cleanF = f.replace(/@[A-Za-z0-9_]+(?:\([^)]*\))?/g, '').trim();
+        cleanF = cleanF.replace(/\b(public|private|protected|final|static|volatile|transient)\b/g, '').trim();
+        cleanF = cleanF.replace(/<[^>]*>/g, ''); // strip generic arguments
+        let decl = cleanF.split('=')[0].replace(';', '').trim();
+        let parts = decl.split(/\s+/).filter(Boolean);
+        if (parts.length > 2) {
+          errors.push(`Compilation Error: Syntax error on token(s), misplaced construct(s) in field declaration: '${f}'`);
+        }
+      });
       cleanSource = cleanSource.substring(0, classIndex) + cleanSource.substring(scanIndex);
     } else {
       cleanSource = cleanSource.substring(0, classIndex) + "cl_ass" + cleanSource.substring(classIndex + 5);
@@ -1612,5 +1624,6 @@ window.JavaRunner = {
   compileJavaCode,
   transpileJavaToJS,
   runJavaTests,
-  VirtualFileSystem
+  VirtualFileSystem,
+  parseClassBody
 };

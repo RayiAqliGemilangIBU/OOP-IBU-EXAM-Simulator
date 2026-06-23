@@ -205,6 +205,29 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       
       if (braceCount === 0) {
+        const bodyText = cleanSourceForLint.substring(openBraceIndex + 1, scanIndex - 1);
+        const bodyStartInOriginal = text.indexOf(bodyText, originalHeaderIndex);
+        
+        if (window.JavaRunner && window.JavaRunner.parseClassBody && bodyStartInOriginal !== -1) {
+          const { fields } = window.JavaRunner.parseClassBody(bodyText);
+          fields.forEach(f => {
+            let cleanF = f.replace(/@[A-Za-z0-9_]+(?:\([^)]*\))?/g, '').trim();
+            cleanF = cleanF.replace(/\b(public|private|protected|final|static|volatile|transient)\b/g, '').trim();
+            cleanF = cleanF.replace(/<[^>]*>/g, ''); // strip generics
+            let decl = cleanF.split('=')[0].replace(';', '').trim();
+            let parts = decl.split(/\s+/).filter(Boolean);
+            if (parts.length > 2) {
+              const fieldStartIdx = bodyStartInOriginal + bodyText.indexOf(f);
+              const fieldEndIdx = fieldStartIdx + f.length;
+              found.push({
+                message: `Syntax error on token(s), misplaced construct(s) in field declaration: '${f}'`,
+                severity: "error",
+                from: getPosFromIndex(fieldStartIdx),
+                to: getPosFromIndex(fieldEndIdx)
+              });
+            }
+          });
+        }
         cleanSourceForLint = cleanSourceForLint.substring(0, classIndex) + cleanSourceForLint.substring(scanIndex);
       } else {
         cleanSourceForLint = cleanSourceForLint.substring(0, classIndex) + "cl_ass" + cleanSourceForLint.substring(classIndex + 5);
